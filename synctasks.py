@@ -21,10 +21,8 @@ if __name__ == '__main__':
     habitica = config['habitica']
     to_sync = rtm['to_sync']
 
-    cache = ConfigObj('.cache')
-    rtm_cache = cache['rtm']
-
-    api = Rtm(rtm['api_key'], rtm['shared_secret'], 'delete', rtm_cache.get('token', None))
+    cache = ConfigObj('.cache', create_empty=True)
+    api = Rtm(rtm['api_key'], rtm['shared_secret'], 'delete', cache.get('token'))
 
     # authentication block, see http://www.rememberthemilk.com/services/api/authentication.rtm
     # check for valid token
@@ -37,7 +35,7 @@ if __name__ == '__main__':
         # get the token for the frob
         api.retrieve_token(frob)
         # store the new token, should be used to initialize the Rtm object next time
-        cache['rtm']['token'] = api.token
+        cache['token'] = api.token
         cache.write()
 
     result = api.rtm.timelines.create()
@@ -52,20 +50,20 @@ if __name__ == '__main__':
     r.raise_for_status()
     response = r.json()
     habitica_todos = response['data']
-    aliases = [x['alias'] for x in habitica_todos if x.get('alias', None) is not None]
+    aliases = [x['alias'] for x in habitica_todos if x.get('alias') is not None]
 
     # get all recently completed habitica to-dos, see https://habitica.com/apidoc/#api-Task-GetUserTasks
     r = requests.get(COMPLETED_TODOS_URL, headers=headers)
     r.raise_for_status()
     response = r.json()
     habitica_completed_todos = response['data']
-    completed_aliases = [x['alias'] for x in habitica_completed_todos if x.get('alias', None) is not None]
+    completed_aliases = [x['alias'] for x in habitica_completed_todos if x.get('alias') is not None]
 
     # get all open next actions, see http://www.rememberthemilk.com/services/api/methods/rtm.tasks.getList.rtm
     open_tasks_filter = '{} AND status:incomplete'.format(to_sync)
     closed_tasks_filter = '{} AND status:complete'.format(to_sync)
 
-    last_sync = cache['rtm'].get('last_sync', None)
+    last_sync = cache.get('last_sync')
     now = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
     if last_sync is not None:
         open_tasks = api.rtm.tasks.getList(filter=open_tasks_filter, last_sync=last_sync)
@@ -74,7 +72,7 @@ if __name__ == '__main__':
         open_tasks = api.rtm.tasks.getList(filter=open_tasks_filter)
         closed_tasks = api.rtm.tasks.getList(filter=closed_tasks_filter)
 
-    cache['rtm']['last_sync'] = now
+    cache['last_sync'] = now
     cache.write()
 
     new_tasks = []
