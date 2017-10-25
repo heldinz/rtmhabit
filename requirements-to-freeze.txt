@@ -1,0 +1,4 @@
+configobj<5.1
+httplib2>=0.6.0
+requests<2.19
+rtmapi<0.8
